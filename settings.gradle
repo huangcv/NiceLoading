@@ -1,0 +1,3 @@
+rootProject.name = "NiceLoading"
+include ':app'
+include ':library'
