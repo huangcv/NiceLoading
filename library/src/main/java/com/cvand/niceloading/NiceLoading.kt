@@ -80,7 +80,7 @@ class NiceLoading private constructor() {
     }
 
     private fun bindWithId(activity: Activity, @IdRes idRes: Int): StateHolderBuilder =
-        bindWithView(activity.findViewById<View>(idRes))
+            bindWithView(activity.findViewById<View>(idRes))
 
     private fun bindWithView(view: View?): StateHolderBuilder = StateHolderBuilder(view, config)
 
@@ -96,8 +96,8 @@ typealias EmptyClickAction = () -> Unit
  * 状态视图Holder 构建器
  */
 class StateHolderBuilder internal constructor(
-    internal val originView: View?,
-    internal val config: NiceLoadingConfig
+        internal val originView: View?,
+        internal val config: NiceLoadingConfig
 ) {
     internal var wrapperView: FrameLayout? = null
     internal var stateConfig: StateConfig = StateConfig(config)
@@ -114,8 +114,8 @@ class StateHolderBuilder internal constructor(
                 parent.addView(wrapperView, index)
             }
             val newLp = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
             )
             wrapperView!!.addView(originView, newLp)
         }
@@ -155,20 +155,20 @@ class StateHolderBuilder internal constructor(
     }
 
     fun errorClick(@IdRes idRes: Int = config.errorClickIdRes, errorClickAction: ErrorClickAction) =
-        apply {
-            stateConfig.errorClickIdRes = idRes
-            stateConfig.errorAction = errorClickAction
-        }
+            apply {
+                stateConfig.errorClickIdRes = idRes
+                stateConfig.errorAction = errorClickAction
+            }
 
     fun emptyClick(@IdRes idRes: Int = config.emptyClickIdRes, emptyClickAction: EmptyClickAction) =
-        apply {
-            stateConfig.emptyClickIdRes = idRes
-            stateConfig.emptyAction = emptyClickAction
-        }
+            apply {
+                stateConfig.emptyClickIdRes = idRes
+                stateConfig.emptyAction = emptyClickAction
+            }
 
     fun noNetworkClick(
-        @IdRes idRes: Int = config.noNetworkClickIdRes,
-        noNetworkClickAction: NoNetworkClickAction
+            @IdRes idRes: Int = config.noNetworkClickIdRes,
+            noNetworkClickAction: NoNetworkClickAction
     ) = apply {
         stateConfig.noNetworkClickIdRes = idRes
         stateConfig.noNetworkAction = noNetworkClickAction
@@ -184,6 +184,10 @@ class StateHolderBuilder internal constructor(
 
     fun defaultState(state: State) = apply {
         stateConfig.defaultState = state
+    }
+
+    fun showLoadingWithHideContent(shown: Boolean) = apply {
+        stateConfig.showLoadingWithHideContent = shown
     }
 
     fun singleStateViewProvider(state: State, viewProvider: SingleStateViewProvider) = apply {
@@ -256,6 +260,8 @@ class StateConfig internal constructor(config: NiceLoadingConfig) {
     var viewAnimation: Animation? = config.defaultViewAnimation
         internal set
     var contentSkipAnimation: Boolean = config.contentSkipAnimation
+        internal set
+    var showLoadingWithHideContent: Boolean = config.showLoadingWithHideContent
         internal set
 
 }
@@ -354,6 +360,11 @@ class NiceLoadingConfig private constructor() {
      */
     internal var contentSkipAnimation = false
         private set
+
+    /**
+     * 显示内容时,切换loading 状态是否隐藏内容视图, 默认隐藏内容视图
+     */
+    internal var showLoadingWithHideContent = true
 
     companion object {
         /**
@@ -461,6 +472,13 @@ class NiceLoadingConfig private constructor() {
      */
     fun viewAnimation(animation: Animation) = apply {
         this.defaultViewAnimation = animation
+    }
+
+    /**
+     * 显示加载视图时是否隐藏内容视图
+     */
+    fun showLoadingWithHideContent(shown: Boolean) = apply {
+        this.showLoadingWithHideContent = shown
     }
 
     /**
@@ -584,8 +602,8 @@ class StateHolder internal constructor(private val builder: StateHolderBuilder) 
     private fun initTargetView(targetView: View?, state: State) {
         targetView?.let {
             getSingleStateViewProvider(state)?.initView(it, builder.stateConfig)
-                ?: builder.stateConfig.viewProvider?.initView(it, state, builder.stateConfig)
-                ?: builder.config.viewProvider?.initView(it, state, builder.stateConfig)
+                    ?: builder.stateConfig.viewProvider?.initView(it, state, builder.stateConfig)
+                    ?: builder.config.viewProvider?.initView(it, state, builder.stateConfig)
             viewCache.put(state.ordinal, it)
             bindClickEvent(targetView, state)
         }
@@ -596,11 +614,11 @@ class StateHolder internal constructor(private val builder: StateHolderBuilder) 
      */
     private fun createStateView(state: State): View? {
         return getSingleStateViewProvider(state)?.provideView(builder.wrapperView!!.context)
-            ?: builder.stateConfig.viewProvider?.provideView(builder.wrapperView!!.context, state)
-            ?: builder.config.viewProvider?.provideView(
-                builder.wrapperView!!.context,
-                state
-            )
+                ?: builder.stateConfig.viewProvider?.provideView(builder.wrapperView!!.context, state)
+                ?: builder.config.viewProvider?.provideView(
+                        builder.wrapperView!!.context,
+                        state
+                )
     }
 
     /**
@@ -667,15 +685,21 @@ class StateHolder internal constructor(private val builder: StateHolderBuilder) 
      * 添加新的视图
      */
     private fun addNewStateView(
-        rootView: FrameLayout,
-        targetView: View?,
-        firstShow: Boolean,
-        state: State
+            rootView: FrameLayout,
+            targetView: View?,
+            firstShow: Boolean,
+            state: State
     ) {
         targetView?.let { tv ->
             currentView?.let {
                 it.clearAnimation()
-                rootView.removeView(it)
+                if (!builder.stateConfig.showLoadingWithHideContent) {
+                    rootView.removeView(it)
+                } else {
+                    if (currentState != State.CONTENT || state != State.LOADING) {
+                        rootView.removeAllViews()
+                    }
+                }
             }
             //添加要显示的View
             if (rootView.indexOfChild(tv) >= 0) {
@@ -721,8 +745,8 @@ class StateHolder internal constructor(private val builder: StateHolderBuilder) 
      * 如果已经添加过视图,直接显示到最上层,会触发requestLayout() 和 invalidate()
      */
     private fun bringTargetViewFront(
-        rootView: FrameLayout,
-        targetView: View?
+            rootView: FrameLayout,
+            targetView: View?
     ) {
         if (rootView.indexOfChild(targetView) != rootView.childCount - 1) {
             targetView?.bringToFront()
